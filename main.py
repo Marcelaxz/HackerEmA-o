@@ -24,14 +24,21 @@ janela = pygame.display.set_mode(SCREEN_SIZE)
 background = pygame.image.load('imagens/tela.png')
 menina = pygame.image.load('imagens/lya.png')
 inimi = pygame.image.load('imagens/inimi.png')
-#inimi2 = pygame.image.load('imagens/inimi2.png')
-#inimi3 = pygame.image.load('imagens/inimi3.png')
+speaker = pygame.image.load('imagens/speaker.png')
+mute = pygame.image.load('imagens/mute.png')
+heart = pygame.image.load('imagens/vida.png')
+
 
 # ÁUDIOS
 pygame.mixer.init()
 soundtrack = "audios/fase.mp3"
 pygame.mixer.music.load(soundtrack)
 pygame.mixer.music.play(-1)
+dano = "audios/sofreDano.wav"
+hitSound = pygame.mixer.Sound(dano)
+morte = "audios/mortePersonagem.wav"
+deathSound = pygame.mixer.Sound(morte)
+deathSound_cont = 43
 
 
 # PLAYER
@@ -88,7 +95,7 @@ class Enemy1(pygame.sprite.Sprite):
                 random.randint(0, 600),
             )
         )
-        self.speed = random.randint(5, 10)
+        self.speed = random.randint(7, 15)
 
     def update(self):
         self.rect.move_ip(-self.speed, 0)
@@ -96,30 +103,25 @@ class Enemy1(pygame.sprite.Sprite):
             self.kill()
 
 
-"""class Enemy2(pygame.sprite.Sprite):
-    def __init__(self):
-        super(Enemy2, self).__init__()
-        self.image = inimi2
-        self.rect = self.image.get_rect(
-            center=(
-                random.randint(1300 + 20, 1300 + 100),
-                random.randint(0, 600),
-            )
-        )
-        self.speed = random.randint(5, 10)
-
-
-    def update(self):
-        self.rect.move_ip(-self.speed, 0)
-        if self.rect.right < 0:
-            self.kill()
-"""
 # BLOCOS
 """class Blocos(pygame.sprite.Sprite):
     def __init__(self):
         super"""
 
 
+# GAME OVER
+def gameOver():
+    clock.tick(90)
+    color = (252, 3, 211)
+    pygame.draw.rect(screen, color, pygame.Rect(60, 60, 1200, 500))
+    pygame.display.flip()
+    pygame.font.init()
+    fonte = pygame.font.SysFont('Arial', 100)
+    texto = fonte.render('Você morreu', False, (255, 255, 255))
+    screen.blit(texto, (370, 250))
+
+
+# PYGAME.INIT()
 pygame.init()
 
 
@@ -150,10 +152,16 @@ all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 
 
+# VIDA
+vida = 3
+
 # JOGO
+soundtrack = True
+
 Jogo = True
 while Jogo:
     clock.tick(30)
+
 
     for evento in pygame.event.get():
         if evento.type == QUIT:
@@ -162,12 +170,16 @@ while Jogo:
             new_enemy = Enemy1()
             enemies.add(new_enemy)
             all_sprites.add(new_enemy)
-            """new_enemy2 = Enemy2()
-            enemies.add(new_enemy2)
-            all_sprites.add(new_enemy2)"""
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_SPACE:
                 player.isJump = True
+            if evento.key == pygame.K_x:
+                if soundtrack:
+                    pygame.mixer.music.pause()
+                    soundtrack = False
+                else:
+                    pygame.mixer.music.unpause()
+                    soundtrack = True
 
 
     # BACKGROUND
@@ -181,9 +193,22 @@ while Jogo:
         floor_x_pos = 0
 
 
+    # PAUSE / PLAY
+    pygame.font.init()
+    fonte = pygame.font.SysFont('Arial', 11)
+    texto = fonte.render('Pressione "x" para pausar ou dar play no som', False, (255, 255, 255))
+    screen.blit(texto, (1015, 30))
+
+    if soundtrack == True:
+        screen.blit(speaker, (1250, 20))
+    else:
+        screen.blit(mute, (1250, 20))
+
+
     # MOVIMENTO
     pressed_keys = pygame.key.get_pressed()
     player.update(pressed_keys)
+
 
     # PULO
     player.jump()
@@ -194,14 +219,25 @@ while Jogo:
 
 
     # COLISÃO
-    if pygame.sprite.spritecollideany(player, enemies):
-        clock.tick(90)
+    if pygame.sprite.spritecollide(player, enemies, True):
+        hitSound.play()
+        vida -= 1
+    if vida <= 0:
+        deathSound.play()
+        deathSound_cont -= 1
+        if deathSound_cont <= 0:
+           hitSound.stop()
+           deathSound.stop()
+        gameOver()
         pygame.display.update()
         player.kill()
-        Jogo = False
 
+
+    # VIDA
+    for l in range(vida):
+        screen.blit(heart, (20 + (l*50), 10))
 
     # UPDATE
-    pygame.display.update()
+    pygame.display.flip()
 
 pygame.quit()
